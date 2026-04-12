@@ -21,7 +21,7 @@ end)
 game.StarterGui:SetCore(
     "SendNotification",
     {
-        Title = "Fix Lag Blox Fruit",
+        Title = "Fix Lag",
         Text = "Loading......",
         Duration = 3
     })
