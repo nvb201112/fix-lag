@@ -1,108 +1,108 @@
---// ADVANCED BOOSTER + MEMORY CLEANER
+--// UI SAFE FPS BOOSTER
 
 local RunService = game:GetService("RunService")
 local Lighting = game:GetService("Lighting")
 local Debris = game:GetService("Debris")
+local Players = game:GetService("Players")
+
+local LocalPlayer = Players.LocalPlayer
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 
 -- =========================
 -- SETTINGS
 -- =========================
 local SETTINGS = {
     FPS_CAP = 60,
-    AUTO_OPTIMIZE = true,
-    MEMORY_CLEAN_INTERVAL = 10, -- giây
-    AGGRESSIVE_CLEAN = false -- bật nếu máy rất yếu
+    KEEP_PLAYER_VISIBLE = true,
+    AUTO_OPTIMIZE = true
 }
 
--- =========================
--- FPS CAP
--- =========================
 pcall(function()
     setfpscap(SETTINGS.FPS_CAP)
 end)
 
 -- =========================
--- CLEAN LIGHTING EFFECTS
+-- SAFE CHECK (KHÔNG ĐỤNG UI)
 -- =========================
-local function cleanLighting()
-    for _, v in pairs(Lighting:GetDescendants()) do
-        if v:IsA("BlurEffect")
-        or v:IsA("SunRaysEffect")
-        or v:IsA("BloomEffect")
-        or v:IsA("ColorCorrectionEffect") then
-            v:Destroy()
-        end
-    end
+local function isUI(v)
+    return v:IsDescendantOf(PlayerGui)
 end
 
-cleanLighting()
+-- =========================
+-- LIGHTING CLEAN
+-- =========================
+Lighting.GlobalShadows = false
+Lighting.FogEnd = 9e9
+Lighting.Brightness = 1
 
--- =========================
--- CLEAR UNUSED EFFECTS
--- =========================
-local function clearEffects()
-    for _, v in pairs(workspace:GetDescendants()) do
-        if v:IsA("ParticleEmitter")
-        or v:IsA("Trail")
-        or v:IsA("Smoke")
-        or v:IsA("Fire")
-        or v:IsA("Sparkles") then
-            v.Enabled = false
-        end
+for _, v in pairs(Lighting:GetDescendants()) do
+    if v:IsA("PostEffect") then
+        v:Destroy()
     end
 end
 
 -- =========================
--- MEMORY CLEANER CORE
+-- OPTIMIZE MAP (SAFE)
 -- =========================
-local function memoryCleaner()
-    for _, v in pairs(workspace:GetDescendants()) do
-        
-        -- ❌ Xoá object vô dụng
-        if v:IsA("Decal") or v:IsA("Texture") then
-            if SETTINGS.AGGRESSIVE_CLEAN then
-                v:Destroy()
-            end
-        end
+local function optimize(v)
+    if isUI(v) then return end
 
-        -- ❌ Sound không phát → xoá
-        if v:IsA("Sound") and not v.IsPlaying then
-            pcall(function()
-                v:Destroy()
-            end)
-        end
-
-        -- ❌ Particle không dùng
-        if v:IsA("ParticleEmitter") and v.Enabled == false then
-            if SETTINGS.AGGRESSIVE_CLEAN then
-                v:Destroy()
-            end
-        end
+    if v:IsA("BasePart") then
+        v.Material = Enum.Material.SmoothPlastic
+        v.Reflectance = 0
+        v.CastShadow = false
     end
 
-    -- 🧹 clear debris queue
-    pcall(function()
-        Debris.MaxItems = 0
+    if v:IsA("Decal") or v:IsA("Texture") then
+        v:Destroy()
+    end
+
+    if v:IsA("ParticleEmitter")
+    or v:IsA("Trail")
+    or v:IsA("Smoke")
+    or v:IsA("Fire")
+    or v:IsA("Sparkles") then
+        v.Enabled = false
+    end
+end
+
+-- chạy lần đầu
+for _, v in pairs(workspace:GetDescendants()) do
+    optimize(v)
+end
+
+-- =========================
+-- HANDLE OBJECT MỚI
+-- =========================
+workspace.DescendantAdded:Connect(function(v)
+    task.spawn(function()
+        optimize(v)
     end)
-end
+end)
 
 -- =========================
--- LOW MATERIAL (giảm RAM + GPU)
+-- MEMORY CLEAN (SAFE)
 -- =========================
-local function lowMaterial()
-    for _, v in pairs(workspace:GetDescendants()) do
-        if v:IsA("BasePart") then
-            v.Material = Enum.Material.Plastic
-            v.Reflectance = 0
+task.spawn(function()
+    while task.wait(10) do
+        for _, v in pairs(workspace:GetDescendants()) do
+            if isUI(v) then continue end
+
+            if v:IsA("Sound") and not v.IsPlaying then
+                pcall(function()
+                    v:Destroy()
+                end)
+            end
         end
-    end
-end
 
-lowMaterial()
-clearEffects()
+        pcall(function()
+            Debris.MaxItems = 0
+        end)
+    end
+end)
 
 -- =========================
--- FPS TRACKER
+-- FPS TRACK + AUTO BOOST
 -- =========================
 local fps = 0
 local lastFPS = 60
@@ -111,9 +111,6 @@ RunService.Heartbeat:Connect(function()
     fps += 1
 end)
 
--- =========================
--- AUTO OPTIMIZE SYSTEM
--- =========================
 task.spawn(function()
     while task.wait(1) do
         lastFPS = fps
@@ -121,26 +118,18 @@ task.spawn(function()
 
         if SETTINGS.AUTO_OPTIMIZE then
             if lastFPS < 30 then
-                clearEffects()
-                memoryCleaner()
-            elseif lastFPS < 50 then
-                clearEffects()
+                for _, v in pairs(workspace:GetDescendants()) do
+                    if v:IsA("BasePart") then
+                        v.Transparency = math.clamp(v.Transparency + 0.03, 0, 0.5)
+                    end
+                end
             end
         end
     end
 end)
 
 -- =========================
--- PERIODIC MEMORY CLEAN
--- =========================
-task.spawn(function()
-    while task.wait(SETTINGS.MEMORY_CLEAN_INTERVAL) do
-        memoryCleaner()
-    end
-end)
-
--- =========================
--- ANTI LAG SPIKE
+-- ANTI SPIKE
 -- =========================
 RunService.Stepped:Connect(function()
     if lastFPS < 25 then
@@ -148,4 +137,4 @@ RunService.Stepped:Connect(function()
     end
 end)
 
-print("🧹 Memory Cleaner + FPS Booster Loaded")
+print("⚡ UI Safe Booster Loaded")
