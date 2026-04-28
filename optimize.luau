@@ -1,4 +1,95 @@
---// ADVANCED BOOSTER + MEMORY CLEANER
+-- FPS Counter (Draggable + Color)
+
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+
+-- GUI
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "FPSCounter"
+pcall(function()
+    ScreenGui.Parent = game.CoreGui
+end)
+
+local Frame = Instance.new("Frame")
+Frame.Size = UDim2.new(0, 130, 0, 45)
+Frame.Position = UDim2.new(0, 10, 0, 10)
+Frame.BackgroundColor3 = Color3.fromRGB(0,0,0)
+Frame.BackgroundTransparency = 0.3
+Frame.BorderSizePixel = 0
+Frame.Parent = ScreenGui
+
+local TextLabel = Instance.new("TextLabel")
+TextLabel.Size = UDim2.new(1,0,1,0)
+TextLabel.BackgroundTransparency = 1
+TextLabel.Text = "FPS: ..."
+TextLabel.TextScaled = true
+TextLabel.Font = Enum.Font.Code
+TextLabel.TextColor3 = Color3.fromRGB(0,255,0)
+TextLabel.Parent = Frame
+
+-- FPS calc
+local lastTime = tick()
+local frameCount = 0
+
+RunService.RenderStepped:Connect(function()
+    frameCount += 1
+    
+    local now = tick()
+    if now - lastTime >= 1 then
+        local fps = frameCount
+        frameCount = 0
+        lastTime = now
+        
+        TextLabel.Text = "FPS: " .. fps
+        
+        -- đổi màu theo FPS
+        if fps < 30 then
+            TextLabel.TextColor3 = Color3.fromRGB(255, 0, 0)
+        elseif fps < 60 then
+            TextLabel.TextColor3 = Color3.fromRGB(255, 255, 0)
+        else
+            TextLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
+        end
+    end
+end)
+
+-- Drag system (mượt, không giật)
+local dragging = false
+local dragInput, dragStart, startPos
+
+Frame.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 
+    or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = Frame.Position
+
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
+    end
+end)
+
+Frame.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement 
+    or input.UserInputType == Enum.UserInputType.Touch then
+        dragInput = input
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if input == dragInput and dragging then
+        local delta = input.Position - dragStart
+        Frame.Position = UDim2.new(
+            startPos.X.Scale,
+            startPos.X.Offset + delta.X,
+            startPos.Y.Scale,
+            startPos.Y.Offset + delta.Y
+        )
+    end
+end)
 
 local RunService = game:GetService("RunService")
 local Lighting = game:GetService("Lighting")
